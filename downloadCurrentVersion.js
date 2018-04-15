@@ -2,6 +2,7 @@
 
 // This is used to download the correct binary version
 // as part of the prepublish step.
+import compare from 'version-comparator'
 
 var pkg = require('./package.json');
 var fs = require('fs');
@@ -63,8 +64,21 @@ console.log('Downloading correct solidity binary...');
 
 getVersionList(function (list) {
   list = JSON.parse(list);
-  var wanted = pkg.version.match(/^(\d+\.\d+\.\d+)$/)[1];
-  var releaseFileName = list.releases[wanted];
+
+  let sortedBuildList = list.builds.sort((a,b) => compare(processLongVersion(b.longVersion), processLongVersion(a.longVersion)))
+  let latestBuild = sortedBuildList[0]
+
+  // var wanted = pkg.version.match(/^(\d+\.\d+\.\d+)$/)[1];
+  // var releaseFileName = list.releases[wanted];
+
+  var releaseFileName = latestBuild.path
+
   var expectedHash = list.builds.filter(function (entry) { return entry.path === releaseFileName; })[0].keccak256;
   downloadBinary('soljson.js', releaseFileName, expectedHash);
 });
+
+function processLongVersion(longVersionString){
+  let cut = longVersionString.substring(0,longVersionString.indexOf("+"))
+  let replacedNightly = cut.replace('-nightly', '')
+  return replacedNightly
+}
